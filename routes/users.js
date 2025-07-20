@@ -5,7 +5,11 @@ const {
     getAllUsers,
     getUserById,
     updateUserById,
-    deleteUserById
+    deleteUserById,
+    getUsersByCity,
+    getUsersByGender,
+    searchUsers,
+    getStats
 } = require('../controllers/userController');
 
 /**
@@ -23,10 +27,42 @@ router.post('/', createUser);
 
 /**
  * @route   GET /users
- * @desc    Get all users
+ * @desc    Get all users with optional filtering and pagination
  * @access  Public
+ * @query   {limit, offset, city, gender, search}
  */
 router.get('/', getAllUsers);
+
+/**
+ * @route   GET /users/search
+ * @desc    Search users by name or email
+ * @access  Public
+ * @query   {q} - Search query
+ */
+router.get('/search', searchUsers);
+
+/**
+ * @route   GET /users/stats
+ * @desc    Get database statistics
+ * @access  Public
+ */
+router.get('/stats', getStats);
+
+/**
+ * @route   GET /users/city/:city
+ * @desc    Get users by city
+ * @access  Public
+ * @param   {string} city - City name
+ */
+router.get('/city/:city', getUsersByCity);
+
+/**
+ * @route   GET /users/gender/:gender
+ * @desc    Get users by gender
+ * @access  Public
+ * @param   {string} gender - Gender (male, female, other)
+ */
+router.get('/gender/:gender', getUsersByGender);
 
 /**
  * @route   GET /users/:id

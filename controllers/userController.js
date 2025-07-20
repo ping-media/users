@@ -1,11 +1,5 @@
 const { v4: uuidv4 } = require('uuid');
-const { 
-    readUsers, 
-    findUserById, 
-    addUser, 
-    updateUser, 
-    deleteUser 
-} = require('../helpers/fileUtils');
+const userRepository = require('../database/userRepository');
 
 /**
  * User Controller
@@ -81,6 +75,15 @@ async function createUser(req, res) {
             });
         }
 
+        // Check if email already exists
+        const existingUser = await userRepository.getUserByEmail(userData.email.toLowerCase().trim());
+        if (existingUser) {
+            return res.status(409).json({
+                success: false,
+                message: 'Email already exists'
+            });
+        }
+
         // Generate UUID for the user
         const newUser = {
             id: uuidv4(),
@@ -92,8 +95,8 @@ async function createUser(req, res) {
             age: Number(userData.age)
         };
 
-        // Add user to file
-        const createdUser = await addUser(newUser);
+        // Add user to database
+        const createdUser = await userRepository.createUser(newUser);
 
         res.status(201).json({
             success: true,
@@ -112,19 +115,35 @@ async function createUser(req, res) {
 }
 
 /**
- * Get all users
+ * Get all users with optional filtering and pagination
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
 async function getAllUsers(req, res) {
     try {
-        const users = await readUsers();
+        const { limit, offset, city, gender, search } = req.query;
+        
+        // Parse pagination parameters
+        const options = {};
+        if (limit) options.limit = parseInt(limit);
+        if (offset) options.offset = parseInt(offset);
+        if (city) options.city = city;
+        if (gender) options.gender = gender;
+        if (search) options.search = search;
+
+        const users = await userRepository.getAllUsers(options);
+        const totalCount = await userRepository.getUserCount({ city, gender });
         
         res.status(200).json({
             success: true,
             message: 'Users retrieved successfully',
             data: users,
-            count: users.length
+            pagination: {
+                total: totalCount,
+                limit: options.limit || null,
+                offset: options.offset || 0,
+                count: users.length
+            }
         });
 
     } catch (error) {
@@ -146,7 +165,7 @@ async function getUserById(req, res) {
     try {
         const { id } = req.params;
         
-        const user = await findUserById(id);
+        const user = await userRepository.getUserById(id);
         
         if (!user) {
             return res.status(404).json({
@@ -182,7 +201,7 @@ async function updateUserById(req, res) {
         const updateData = req.body;
 
         // Check if user exists
-        const existingUser = await findUserById(id);
+        const existingUser = await userRepository.getUserById(id);
         if (!existingUser) {
             return res.status(404).json({
                 success: false,
@@ -200,6 +219,17 @@ async function updateUserById(req, res) {
             });
         }
 
+        // Check if email is being changed and if it already exists
+        if (updateData.email && updateData.email.toLowerCase().trim() !== existingUser.email) {
+            const emailExists = await userRepository.getUserByEmail(updateData.email.toLowerCase().trim());
+            if (emailExists) {
+                return res.status(409).json({
+                    success: false,
+                    message: 'Email already exists'
+                });
+            }
+        }
+
         // Prepare updated user data
         const updatedUserData = {
             name: updateData.name.trim(),
@@ -211,7 +241,14 @@ async function updateUserById(req, res) {
         };
 
         // Update user
-        const updatedUser = await updateUser(id, updatedUserData);
+        const updatedUser = await userRepository.updateUser(id, updatedUserData);
+
+        if (!updatedUser) {
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to update user'
+            });
+        }
 
         res.status(200).json({
             success: true,
@@ -239,7 +276,7 @@ async function deleteUserById(req, res) {
         const { id } = req.params;
 
         // Check if user exists
-        const existingUser = await findUserById(id);
+        const existingUser = await userRepository.getUserById(id);
         if (!existingUser) {
             return res.status(404).json({
                 success: false,
@@ -248,7 +285,7 @@ async function deleteUserById(req, res) {
         }
 
         // Delete user
-        const deleted = await deleteUser(id);
+        const deleted = await userRepository.deleteUser(id);
 
         if (deleted) {
             res.status(200).json({
@@ -272,10 +309,129 @@ async function deleteUserById(req, res) {
     }
 }
 
+/**
+ * Get users by city
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+async function getUsersByCity(req, res) {
+    try {
+        const { city } = req.params;
+        const users = await userRepository.getUsersByCity(city);
+        
+        res.status(200).json({
+            success: true,
+            message: `Users in ${city} retrieved successfully`,
+            data: users,
+            count: users.length
+        });
+
+    } catch (error) {
+        console.error('Error getting users by city:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error',
+            error: error.message
+        });
+    }
+}
+
+/**
+ * Get users by gender
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+async function getUsersByGender(req, res) {
+    try {
+        const { gender } = req.params;
+        const users = await userRepository.getUsersByGender(gender);
+        
+        res.status(200).json({
+            success: true,
+            message: `Users with gender ${gender} retrieved successfully`,
+            data: users,
+            count: users.length
+        });
+
+    } catch (error) {
+        console.error('Error getting users by gender:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error',
+            error: error.message
+        });
+    }
+}
+
+/**
+ * Search users
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+async function searchUsers(req, res) {
+    try {
+        const { q } = req.query;
+        
+        if (!q) {
+            return res.status(400).json({
+                success: false,
+                message: 'Search query is required'
+            });
+        }
+
+        const users = await userRepository.searchUsers(q);
+        
+        res.status(200).json({
+            success: true,
+            message: 'Search completed successfully',
+            data: users,
+            count: users.length,
+            query: q
+        });
+
+    } catch (error) {
+        console.error('Error searching users:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error',
+            error: error.message
+        });
+    }
+}
+
+/**
+ * Get database statistics
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+async function getStats(req, res) {
+    try {
+        const stats = await userRepository.getStats();
+        
+        res.status(200).json({
+            success: true,
+            message: 'Statistics retrieved successfully',
+            data: stats
+        });
+
+    } catch (error) {
+        console.error('Error getting stats:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error',
+            error: error.message
+        });
+    }
+}
+
 module.exports = {
     createUser,
     getAllUsers,
     getUserById,
     updateUserById,
-    deleteUserById
+    deleteUserById,
+    getUsersByCity,
+    getUsersByGender,
+    searchUsers,
+    getStats
 }; 

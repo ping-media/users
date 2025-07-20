@@ -1,285 +1,324 @@
-# Users CRUD REST API
+# Users CRUD API with SQLite Database
 
-A simple CRUD REST API built with Node.js and Express, storing data in a local JSON file (`data.json`).
+A robust REST API for user management with SQLite database storage, featuring advanced filtering, search, and statistics capabilities.
 
-## Features
+## 🚀 Features
 
-- ✅ Complete CRUD operations (Create, Read, Update, Delete)
-- ✅ Data persistence using local JSON file
-- ✅ Input validation and error handling
-- ✅ UUID-based user identification
-- ✅ Modular code structure
-- ✅ Comprehensive documentation
-- ✅ CORS support
-- ✅ Request logging
+- **SQLite Database**: Fast, reliable, and lightweight database storage
+- **CRUD Operations**: Complete Create, Read, Update, Delete functionality
+- **Advanced Filtering**: Filter users by city, gender, and search terms
+- **Pagination**: Built-in pagination support for large datasets
+- **Search**: Full-text search across name and email fields
+- **Statistics**: Comprehensive database statistics and analytics
+- **Data Validation**: Robust input validation and error handling
+- **Health Checks**: Built-in health monitoring endpoints
+- **Docker Support**: Containerized deployment with Docker
+- **Migration Tools**: Easy migration from JSON to SQLite
 
-## Project Structure
+## 📋 Prerequisites
 
+- Node.js 14.0.0 or higher
+- npm or yarn package manager
+- Docker (optional, for containerized deployment)
+
+## 🛠️ Installation
+
+### 1. Clone and Install Dependencies
+
+```bash
+cd users
+npm install
 ```
-users/
-├── server.js              # Main server file
-├── package.json           # Dependencies and scripts
-├── data.json             # Data storage file
-├── README.md             # This file
-├── routes/
-│   └── users.js          # User routes
-├── controllers/
-│   └── userController.js # Business logic and validation
-└── helpers/
-    └── fileUtils.js      # File operations utilities
+
+### 2. Initialize Database
+
+```bash
+npm run db:init
 ```
 
-## Installation
+This will:
 
-1. Navigate to the users directory:
+- Create the SQLite database file (`data/users.db`)
+- Set up the users table with proper schema
+- Create indexes for optimal performance
+- Set up triggers for automatic timestamp updates
 
-   ```bash
-   cd users
-   ```
+### 3. Migrate Existing Data (Optional)
 
-2. Install dependencies:
+If you have existing JSON data, migrate it to SQLite:
 
-   ```bash
-   npm install
-   ```
+```bash
+npm run db:migrate
+```
 
-3. Start the server:
+This will:
 
-   ```bash
-   npm start
-   ```
+- Read existing `data/data.json` file
+- Migrate all users to SQLite database
+- Create a backup of the original JSON file
+- Skip duplicate users (based on email)
 
-   Or for development with auto-restart:
+### 4. Start the Server
 
-   ```bash
-   npm run dev
-   ```
+```bash
+# Development mode with auto-reload
+npm run dev
+
+# Production mode
+npm start
+```
 
 The server will start on `http://localhost:3000`
 
-## API Endpoints
+## 🐳 Docker Deployment
 
-### Base URL
+### Build and Run with Docker
 
+```bash
+# Build the Docker image
+docker build -t users-api .
+
+# Run the container
+docker run -d \
+  --name users-api \
+  -p 3000:3000 \
+  -v $(pwd)/data:/app/data \
+  users-api
 ```
-http://localhost:3000
+
+### Using Docker Compose
+
+```bash
+# Start with docker-compose
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop services
+docker-compose down
 ```
 
-### User Schema
+## 📚 API Endpoints
+
+### Core CRUD Operations
+
+| Method   | Endpoint     | Description                                 |
+| -------- | ------------ | ------------------------------------------- |
+| `POST`   | `/users`     | Create a new user                           |
+| `GET`    | `/users`     | Get all users (with filtering & pagination) |
+| `GET`    | `/users/:id` | Get user by ID                              |
+| `POST`   | `/users/:id` | Update user by ID                           |
+| `DELETE` | `/users/:id` | Delete user by ID                           |
+
+### Advanced Features
+
+| Method | Endpoint                | Description                   |
+| ------ | ----------------------- | ----------------------------- |
+| `GET`  | `/users/search?q=term`  | Search users by name or email |
+| `GET`  | `/users/stats`          | Get database statistics       |
+| `GET`  | `/users/city/:city`     | Get users by city             |
+| `GET`  | `/users/gender/:gender` | Get users by gender           |
+| `GET`  | `/health`               | Health check endpoint         |
+
+### Query Parameters
+
+- `limit`: Number of users to return (pagination)
+- `offset`: Number of users to skip (pagination)
+- `city`: Filter users by city
+- `gender`: Filter users by gender (male, female, other)
+- `search`: Search in name and email fields
+
+## 📊 User Schema
 
 ```json
 {
   "id": "UUID (auto-generated)",
   "name": "string (required)",
-  "email": "string (required, valid email format)",
+  "email": "string (required, valid email format, unique)",
   "phone": "string (required)",
   "city": "string (required)",
   "gender": "string (required: male, female, or other)",
-  "age": "number (required, 0-150)"
+  "age": "number (required, 0-150)",
+  "created_at": "datetime (auto-generated)",
+  "updated_at": "datetime (auto-updated)"
 }
 ```
 
-### Endpoints
+## 🔧 Configuration
 
-#### 1. Create User
+### Environment Variables
 
-- **POST** `/users`
-- **Description**: Create a new user
-- **Body**: User object (without id)
-- **Response**: Created user with generated UUID
+- `PORT`: Server port (default: 3000)
+- `NODE_ENV`: Environment mode (development/production)
 
-**Example Request:**
+### Database Configuration
+
+The SQLite database is automatically configured and stored in `data/users.db`. The database includes:
+
+- **Indexes**: Optimized queries for email, city, gender, and timestamps
+- **Constraints**: Data validation at the database level
+- **Triggers**: Automatic timestamp updates
+- **Foreign Keys**: Enabled for future extensibility
+
+## 📈 Database Statistics
+
+The `/users/stats` endpoint provides comprehensive statistics:
+
+```json
+{
+  "userCount": 150,
+  "dbSize": 245760,
+  "cityStats": [
+    { "city": "New York", "count": 25 },
+    { "city": "London", "count": 20 }
+  ],
+  "genderStats": [
+    { "gender": "male", "count": 80 },
+    { "gender": "female", "count": 70 }
+  ],
+  "ageStats": {
+    "avgAge": 32.5,
+    "minAge": 18,
+    "maxAge": 65
+  }
+}
+```
+
+## 🧪 Testing the API
+
+### Create a User
 
 ```bash
 curl -X POST http://localhost:3000/users \
   -H "Content-Type: application/json" \
   -d '{
     "name": "John Doe",
-    "email": "john.doe@example.com",
-    "phone": "+1-555-123-4567",
+    "email": "john@example.com",
+    "phone": "+1234567890",
     "city": "New York",
     "gender": "male",
     "age": 30
   }'
 ```
 
-#### 2. Get All Users
-
-- **GET** `/users`
-- **Description**: Retrieve all users
-- **Response**: Array of all users
-
-**Example Request:**
+### Get All Users with Filtering
 
 ```bash
-curl http://localhost:3000/users
+# Get first 10 users
+curl "http://localhost:3000/users?limit=10"
+
+# Filter by city
+curl "http://localhost:3000/users?city=New%20York"
+
+# Search users
+curl "http://localhost:3000/users/search?q=john"
 ```
 
-#### 3. Get User by ID
-
-- **GET** `/users/:id`
-- **Description**: Retrieve a specific user by ID
-- **Parameters**: `id` (UUID)
-- **Response**: User object or 404 if not found
-
-**Example Request:**
+### Get Statistics
 
 ```bash
-curl http://localhost:3000/users/550e8400-e29b-41d4-a716-446655440000
+curl http://localhost:3000/users/stats
 ```
 
-#### 4. Update User
+## 🔍 Health Monitoring
 
-- **POST** `/users/:id`
-- **Description**: Update an existing user
-- **Parameters**: `id` (UUID)
-- **Body**: Updated user data
-- **Response**: Updated user object
-
-**Example Request:**
+### Health Check
 
 ```bash
-curl -X POST http://localhost:3000/users/550e8400-e29b-41d4-a716-446655440000 \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "John Updated",
-    "email": "john.updated@example.com",
-    "phone": "+1-555-999-8888",
-    "city": "Boston",
-    "gender": "male",
-    "age": 31
-  }'
+curl http://localhost:3000/health
 ```
 
-#### 5. Delete User
-
-- **DELETE** `/users/:id`
-- **Description**: Delete a user by ID
-- **Parameters**: `id` (UUID)
-- **Response**: Success message (no data returned)
-
-**Example Request:**
-
-```bash
-curl -X DELETE http://localhost:3000/users/550e8400-e29b-41d4-a716-446655440000
-```
-
-**Example Response:**
+Response:
 
 ```json
 {
-  "success": true,
-  "message": "User deleted successfully"
+  "status": "OK",
+  "timestamp": "2024-01-15T10:30:00.000Z",
+  "service": "Users CRUD API",
+  "database": "SQLite"
 }
 ```
 
-## Response Format
+## 🚨 Error Handling
 
-All API responses follow a consistent format:
+The API provides comprehensive error handling:
 
-### Success Response
+- **400 Bad Request**: Validation errors
+- **404 Not Found**: User not found
+- **409 Conflict**: Email already exists
+- **500 Internal Server Error**: Server errors
 
-```json
-{
-  "success": true,
-  "message": "Operation completed successfully",
-  "data": { ... }
-}
+All errors include detailed messages and suggestions for resolution.
+
+## 🔒 Security Features
+
+- **Input Validation**: Comprehensive validation for all inputs
+- **SQL Injection Protection**: Parameterized queries
+- **Non-root User**: Docker container runs as non-root user
+- **CORS Support**: Configurable cross-origin requests
+- **Error Sanitization**: Sensitive information is not exposed in errors
+
+## 📁 Project Structure
+
+```
+users/
+├── database/
+│   ├── config.js          # Database configuration
+│   ├── database.js        # Database service layer
+│   ├── init.js           # Database initialization
+│   ├── migrate.js        # JSON to SQLite migration
+│   └── userRepository.js # User data access layer
+├── controllers/
+│   └── userController.js # Business logic and validation
+├── routes/
+│   └── users.js         # API route definitions
+├── data/
+│   └── users.db         # SQLite database file
+├── Dockerfile           # Docker configuration
+├── package.json         # Dependencies and scripts
+├── server.js           # Main application entry point
+└── README.md           # This file
 ```
 
-### Error Response
+## 🛠️ Development
 
-```json
-{
-  "success": false,
-  "message": "Error description",
-  "errors": ["Validation error 1", "Validation error 2"]
-}
-```
+### Available Scripts
 
-## HTTP Status Codes
+- `npm start`: Start the production server
+- `npm run dev`: Start development server with auto-reload
+- `npm run db:init`: Initialize the database
+- `npm run db:migrate`: Migrate JSON data to SQLite
 
-- `200` - Success
-- `201` - Created
-- `400` - Bad Request (validation errors)
-- `404` - Not Found
-- `500` - Internal Server Error
+### Database Management
 
-## Validation Rules
+The SQLite database is stored in `data/users.db`. You can:
 
-- **name**: Required, non-empty string
-- **email**: Required, valid email format
-- **phone**: Required, non-empty string
-- **city**: Required, non-empty string
-- **gender**: Required, must be "male", "female", or "other"
-- **age**: Required, number between 0 and 150
+- **Backup**: Copy the `.db` file
+- **Reset**: Delete the `.db` file and run `npm run db:init`
+- **Inspect**: Use SQLite tools like `sqlite3` or DB Browser for SQLite
 
-## Testing the API
+## 🤝 Contributing
 
-### Using curl
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
 
-1. **Get all users:**
+## 📄 License
 
-   ```bash
-   curl http://localhost:3000/users
-   ```
+This project is licensed under the MIT License.
 
-2. **Create a new user:**
+## 🆘 Support
 
-   ```bash
-   curl -X POST http://localhost:3000/users \
-     -H "Content-Type: application/json" \
-     -d '{
-       "name": "Test User",
-       "email": "test@example.com",
-       "phone": "+1-555-000-0000",
-       "city": "Test City",
-       "gender": "other",
-       "age": 25
-     }'
-   ```
+For issues and questions:
 
-3. **Get API documentation:**
-   ```bash
-   curl http://localhost:3000/
-   ```
+1. Check the API documentation at `http://localhost:3000`
+2. Review the health check at `http://localhost:3000/health`
+3. Check server logs for detailed error messages
+4. Verify database connectivity and permissions
 
-### Using Postman or similar tools
+---
 
-Import the following collection or create requests manually using the endpoints described above.
-
-## Error Handling
-
-The API includes comprehensive error handling:
-
-- **Validation Errors**: Returns 400 with specific field errors
-- **Not Found**: Returns 404 for non-existent resources
-- **Server Errors**: Returns 500 with error details
-- **Invalid Routes**: Returns 404 with available routes
-
-## Data Persistence
-
-- Data is stored in `data.json` file
-- File is automatically created if it doesn't exist
-- All operations are atomic (read-modify-write)
-- Data persists between server restarts
-
-## Development
-
-### File Structure Benefits
-
-- **Modularity**: Separated concerns (routes, controllers, helpers)
-- **Maintainability**: Easy to modify and extend
-- **Testability**: Each module can be tested independently
-- **Scalability**: Easy to add new features and endpoints
-
-### Adding New Features
-
-1. Add new routes in `routes/users.js`
-2. Implement business logic in `controllers/userController.js`
-3. Add file operations in `helpers/fileUtils.js` if needed
-4. Update validation rules as required
-
-## License
-
-MIT License - feel free to use this code for your projects!
+**Happy Coding! 🚀**

@@ -1,115 +1,74 @@
-const sqlite3 = require('sqlite3').verbose();
-const { DB_PATH, databaseOptions } = require('./config');
+const mysql = require('mysql2/promise');
+const { DB_CONFIG } = require('./config');
 
 /**
  * Database Service Layer
- * Provides singleton database connection and utility functions
+ * Provides singleton MariaDB connection pool and utility functions
  */
 
 class DatabaseService {
     constructor() {
-        this.db = null;
+        this.pool = null;
     }
 
     /**
-     * Get database instance (singleton pattern)
-     * @returns {Promise<Database>} SQLite database instance
+     * Get MariaDB connection pool (singleton pattern)
+     * @returns {Promise<Pool>} MariaDB connection pool
      */
-    async getDatabase() {
-        if (!this.db) {
-            return new Promise((resolve, reject) => {
-                this.db = new sqlite3.Database(DB_PATH, (err) => {
-                    if (err) {
-                        reject(err);
-                    } else {
-                        // Enable foreign keys
-                        this.db.run('PRAGMA foreign_keys = ON');
-                        // Set busy timeout
-                        this.db.run('PRAGMA busy_timeout = 3000');
-                        resolve(this.db);
-                    }
-                });
-            });
+    async getPool() {
+        if (!this.pool) {
+            this.pool = mysql.createPool(DB_CONFIG);
         }
-        return this.db;
+        return this.pool;
     }
 
     /**
-     * Close database connection
+     * Close database connection pool
      */
     async closeDatabase() {
-        if (this.db) {
-            return new Promise((resolve, reject) => {
-                this.db.close((err) => {
-                    if (err) {
-                        reject(err);
-                    } else {
-                        this.db = null;
-                        resolve();
-                    }
-                });
-            });
+        if (this.pool) {
+            await this.pool.end();
+            this.pool = null;
         }
     }
 
     /**
      * Execute a query with parameters
      * @param {string} sql - SQL query
-     * @param {Object} params - Query parameters
+     * @param {Array} params - Query parameters
      * @returns {Promise<Array>} Query result
      */
-    async query(sql, params = {}) {
-        const db = await this.getDatabase();
-        return new Promise((resolve, reject) => {
-            db.all(sql, params, (err, rows) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(rows || []);
-                }
-            });
-        });
+    async query(sql, params = []) {
+        const pool = await this.getPool();
+        const [rows] = await pool.execute(sql, params);
+        return rows || [];
     }
 
     /**
      * Execute a single row query
      * @param {string} sql - SQL query
-     * @param {Object} params - Query parameters
+     * @param {Array} params - Query parameters
      * @returns {Promise<Object|null>} Single row result or null
      */
-    async queryOne(sql, params = {}) {
-        const db = await this.getDatabase();
-        return new Promise((resolve, reject) => {
-            db.get(sql, params, (err, row) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(row || null);
-                }
-            });
-        });
+    async queryOne(sql, params = []) {
+        const pool = await this.getPool();
+        const [rows] = await pool.execute(sql, params);
+        return rows && rows.length > 0 ? rows[0] : null;
     }
 
     /**
      * Execute an insert/update/delete query
      * @param {string} sql - SQL query
-     * @param {Object} params - Query parameters
-     * @returns {Promise<Object>} Query result with lastID and changes
+     * @param {Array} params - Query parameters
+     * @returns {Promise<Object>} Query result with insertId and affectedRows
      */
-    async execute(sql, params = {}) {
-        const db = await this.getDatabase();
-        return new Promise((resolve, reject) => {
-            db.run(sql, params, function(err) {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve({
-                        lastID: this.lastID,
-                        changes: this.changes
-                    });
-                }
-            });
-        });
+    async execute(sql, params = []) {
+        const pool = await this.getPool();
+        const [result] = await pool.execute(sql, params);
+        return {
+            insertId: result.insertId,
+            affectedRows: result.affectedRows
+        };
     }
 
     /**
@@ -117,18 +76,19 @@ class DatabaseService {
      * @returns {Promise<Object>} Database statistics
      */
     async getStats() {
-        const db = await this.getDatabase();
-        
-        const userCount = await this.queryOne('SELECT COUNT(*) as count FROM users');
-        const pageCount = await this.queryOne('PRAGMA page_count');
-        const pageSize = await this.queryOne('PRAGMA page_size');
-        
-        const dbSize = pageCount.page_count * pageSize.page_size;
-        
+        const pool = await this.getPool();
+        // User count
+        const userCountRow = await this.queryOne('SELECT COUNT(*) as count FROM users');
+        // DB size (in bytes) from information_schema
+        const dbName = DB_CONFIG.database;
+        const dbSizeRow = await this.queryOne(
+            `SELECT SUM(data_length + index_length) AS dbSize FROM information_schema.tables WHERE table_schema = ?`,
+            [dbName]
+        );
         return {
-            userCount: userCount.count,
-            dbSize: dbSize,
-            dbPath: DB_PATH
+            userCount: userCountRow ? userCountRow.count : 0,
+            dbSize: dbSizeRow ? dbSizeRow.dbSize : 0,
+            dbName
         };
     }
 }

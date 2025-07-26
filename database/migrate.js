@@ -5,16 +5,16 @@ const userRepository = require('./userRepository');
 
 /**
  * Migration Script
- * Migrates existing JSON data to SQLite database
+ * Migrates existing JSON data to MariaDB database
  */
 
 async function migrateFromJSON() {
     try {
-        console.log('🔄 Starting migration from JSON to SQLite...');
+        console.log('🔄 Starting migration from JSON to MariaDB...');
 
         // Initialize database
         await initializeDatabase();
-        console.log('✅ Database initialized');
+        console.log('✅ MariaDB database initialized');
 
         // Check if JSON file exists
         const jsonFilePath = path.join(__dirname, '..', 'data', 'data.json');
@@ -89,7 +89,7 @@ async function migrateFromJSON() {
             console.log(`💾 Original JSON data backed up to: ${backupPath}`);
         }
 
-        console.log('🎉 Migration completed successfully!');
+        console.log('🎉 Migration to MariaDB completed successfully!');
 
     } catch (error) {
         console.error('❌ Migration failed:', error);

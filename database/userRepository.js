@@ -45,12 +45,12 @@ class UserRepository {
         // Add pagination
         if (limit) {
             sql += ' LIMIT ?';
-            params.push(limit);
+            params.push(Number(limit));
         }
 
         if (offset) {
             sql += ' OFFSET ?';
-            params.push(offset);
+            params.push(Number(offset));
         }
 
         return db.query(sql, params);
@@ -99,7 +99,7 @@ class UserRepository {
 
         const result = await db.execute(sql, params);
         
-        if (result.changes === 1) {
+        if (result.affectedRows === 1) {
             return this.getUserById(userData.id);
         }
         
@@ -132,7 +132,7 @@ class UserRepository {
 
         const result = await db.execute(sql, params);
 
-        if (result.changes === 1) {
+        if (result.affectedRows === 1) {
             return this.getUserById(id);
         }
 
@@ -147,7 +147,7 @@ class UserRepository {
     async deleteUser(id) {
         const sql = 'DELETE FROM users WHERE id = ?';
         const result = await db.execute(sql, [id]);
-        return result.changes === 1;
+        return result.affectedRows === 1;
     }
 
     /**

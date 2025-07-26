@@ -2,16 +2,17 @@ const path = require('path');
 
 /**
  * Database Configuration
- * SQLite database setup and configuration
+ * MariaDB database setup and configuration
  */
 
-const DB_PATH = path.join(__dirname, '..', 'data', 'users.db');
+const DB_CONFIG = {
+    host: process.env.MARIADB_HOST || 'mariadb', // Use Docker service name
+    user: process.env.MARIADB_USER || 'user',    // Match docker-compose.yml
+    password: process.env.MARIADB_PASSWORD || 'userpassword', // Match docker-compose.yml
+    database: process.env.MARIADB_DATABASE || 'users_db',  // Match docker-compose.yml
+    port: process.env.MARIADB_PORT || 3306
+};
 
 module.exports = {
-    DB_PATH,
-    // Database configuration options
-    databaseOptions: {
-        verbose: process.env.NODE_ENV === 'development' ? console.log : null,
-        fileMustExist: false
-    }
+    DB_CONFIG
 }; 

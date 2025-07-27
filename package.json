@@ -1,7 +1,7 @@
 {
   "name": "users-crud-api",
   "version": "1.0.0",
-  "description": "A simple CRUD REST API for users with SQLite database storage",
+  "description": "A simple CRUD REST API for users with MariaDB database storage",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -15,7 +15,8 @@
     "express",
     "crud",
     "rest-api",
-    "sqlite"
+    "mariadb",
+    "mysql"
   ],
   "author": "Senior Backend Engineer",
   "license": "MIT",

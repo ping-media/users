@@ -1,10 +1,10 @@
-# Users CRUD API with SQLite Database
+# Users CRUD API with MariaDB Database
 
-A robust REST API for user management with SQLite database storage, featuring advanced filtering, search, and statistics capabilities.
+A robust REST API for user management with MariaDB database storage, featuring advanced filtering, search, and statistics capabilities.
 
 ## 🚀 Features
 
-- **SQLite Database**: Fast, reliable, and lightweight database storage
+- **MariaDB Database**: Fast, reliable, and scalable database storage
 - **CRUD Operations**: Complete Create, Read, Update, Delete functionality
 - **Advanced Filtering**: Filter users by city, gender, and search terms
 - **Pagination**: Built-in pagination support for large datasets
@@ -13,12 +13,14 @@ A robust REST API for user management with SQLite database storage, featuring ad
 - **Data Validation**: Robust input validation and error handling
 - **Health Checks**: Built-in health monitoring endpoints
 - **Docker Support**: Containerized deployment with Docker
-- **Migration Tools**: Easy migration from JSON to SQLite
+- **Migration Tools**: Easy migration from JSON to MariaDB
+- **Modular Architecture**: Clean separation of concerns with controllers, routes, and repositories
 
 ## 📋 Prerequisites
 
 - Node.js 14.0.0 or higher
 - npm or yarn package manager
+- MariaDB/MySQL database server
 - Docker (optional, for containerized deployment)
 
 ## 🛠️ Installation
@@ -30,7 +32,21 @@ cd users
 npm install
 ```
 
-### 2. Initialize Database
+### 2. Database Configuration
+
+Configure your MariaDB connection in `database/config.js`:
+
+```javascript
+const DB_CONFIG = {
+  host: process.env.MARIADB_HOST || "localhost",
+  user: process.env.MARIADB_USER || "your_username",
+  password: process.env.MARIADB_PASSWORD || "your_password",
+  database: process.env.MARIADB_DATABASE || "users_db",
+  port: process.env.MARIADB_PORT || 3306,
+};
+```
+
+### 3. Initialize Database
 
 ```bash
 npm run db:init
@@ -38,14 +54,14 @@ npm run db:init
 
 This will:
 
-- Create the SQLite database file (`data/users.db`)
-- Set up the users table with proper schema
-- Create indexes for optimal performance
-- Set up triggers for automatic timestamp updates
+- Connect to MariaDB database
+- Create the users table with proper schema
+- Set up indexes for optimal performance
+- Configure automatic timestamp updates
 
-### 3. Migrate Existing Data (Optional)
+### 4. Migrate Existing Data (Optional)
 
-If you have existing JSON data, migrate it to SQLite:
+If you have existing JSON data, migrate it to MariaDB:
 
 ```bash
 npm run db:migrate
@@ -54,11 +70,11 @@ npm run db:migrate
 This will:
 
 - Read existing `data/data.json` file
-- Migrate all users to SQLite database
+- Migrate all users to MariaDB database
 - Create a backup of the original JSON file
 - Skip duplicate users (based on email)
 
-### 4. Start the Server
+### 5. Start the Server
 
 ```bash
 # Development mode with auto-reload
@@ -82,7 +98,10 @@ docker build -t users-api .
 docker run -d \
   --name users-api \
   -p 3000:3000 \
-  -v $(pwd)/data:/app/data \
+  -e MARIADB_HOST=your_db_host \
+  -e MARIADB_USER=your_db_user \
+  -e MARIADB_PASSWORD=your_db_password \
+  -e MARIADB_DATABASE=users_db \
   users-api
 ```
 
@@ -151,11 +170,17 @@ docker-compose down
 
 - `PORT`: Server port (default: 3000)
 - `NODE_ENV`: Environment mode (development/production)
+- `MARIADB_HOST`: MariaDB host (default: localhost)
+- `MARIADB_USER`: MariaDB username
+- `MARIADB_PASSWORD`: MariaDB password
+- `MARIADB_DATABASE`: MariaDB database name
+- `MARIADB_PORT`: MariaDB port (default: 3306)
 
 ### Database Configuration
 
-The SQLite database is automatically configured and stored in `data/users.db`. The database includes:
+The MariaDB database is configured in `database/config.js` and includes:
 
+- **Connection Pooling**: Optimized database connections
 - **Indexes**: Optimized queries for email, city, gender, and timestamps
 - **Constraints**: Data validation at the database level
 - **Triggers**: Automatic timestamp updates
@@ -169,6 +194,7 @@ The `/users/stats` endpoint provides comprehensive statistics:
 {
   "userCount": 150,
   "dbSize": 245760,
+  "dbName": "users_db",
   "cityStats": [
     { "city": "New York", "count": 25 },
     { "city": "London", "count": 20 }
@@ -236,7 +262,7 @@ Response:
   "status": "OK",
   "timestamp": "2024-01-15T10:30:00.000Z",
   "service": "Users CRUD API",
-  "database": "SQLite"
+  "database": "MariaDB"
 }
 ```
 
@@ -263,19 +289,25 @@ All errors include detailed messages and suggestions for resolution.
 
 ```
 users/
-├── database/
-│   ├── config.js          # Database configuration
-│   ├── database.js        # Database service layer
-│   ├── init.js           # Database initialization
-│   ├── migrate.js        # JSON to SQLite migration
-│   └── userRepository.js # User data access layer
 ├── controllers/
-│   └── userController.js # Business logic and validation
+│   └── userController.js    # Business logic and validation
+├── database/
+│   ├── config.js           # Database configuration
+│   ├── database.js         # Database service layer
+│   ├── init.js            # Database initialization
+│   ├── migrate.js         # JSON to MariaDB migration
+│   └── userRepository.js  # User data access layer
+├── helpers/
+│   └── fileUtils.js       # File utility functions
 ├── routes/
-│   └── users.js         # API route definitions
+│   └── users.js          # API route definitions
 ├── data/
-│   └── users.db         # SQLite database file
-├── Dockerfile           # Docker configuration
+│   ├── data.json         # JSON data file (for migration)
+│   ├── data.json.backup  # Backup of original JSON data
+│   └── users.db          # SQLite database (legacy)
+├── Dockerfile            # Docker configuration
+├── .dockerignore         # Docker ignore file
+├── .gitignore           # Git ignore file
 ├── package.json         # Dependencies and scripts
 ├── server.js           # Main application entry point
 └── README.md           # This file
@@ -287,16 +319,26 @@ users/
 
 - `npm start`: Start the production server
 - `npm run dev`: Start development server with auto-reload
-- `npm run db:init`: Initialize the database
-- `npm run db:migrate`: Migrate JSON data to SQLite
+- `npm run db:init`: Initialize the MariaDB database
+- `npm run db:migrate`: Migrate JSON data to MariaDB
 
 ### Database Management
 
-The SQLite database is stored in `data/users.db`. You can:
+The MariaDB database is configured through environment variables. You can:
 
-- **Backup**: Copy the `.db` file
-- **Reset**: Delete the `.db` file and run `npm run db:init`
-- **Inspect**: Use SQLite tools like `sqlite3` or DB Browser for SQLite
+- **Backup**: Use MariaDB backup tools
+- **Reset**: Drop and recreate the database
+- **Inspect**: Use MariaDB tools or phpMyAdmin
+
+### Architecture Overview
+
+The application follows a clean architecture pattern:
+
+- **Controllers** (`controllers/`): Handle HTTP requests and business logic
+- **Routes** (`routes/`): Define API endpoints and routing
+- **Repository** (`database/userRepository.js`): Data access layer
+- **Database** (`database/`): Database configuration and utilities
+- **Helpers** (`helpers/`): Utility functions for file operations
 
 ## 🤝 Contributing
 
@@ -318,6 +360,11 @@ For issues and questions:
 2. Review the health check at `http://localhost:3000/health`
 3. Check server logs for detailed error messages
 4. Verify database connectivity and permissions
+5. Ensure MariaDB server is running and accessible
+
+## 🔄 Migration from SQLite
+
+This project has been migrated from SQLite to MariaDB for better scalability and performance. The migration tools are included to help transition existing data.
 
 ---
 
